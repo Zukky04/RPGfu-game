@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>シンプルなJavaScriptゲーム</title>
+  <style>
+    /* 全体のスタイル */
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000;
+    }
+    /* キャンバスの中央配置 */
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: #87ceeb; /* 画像が読み込まれるまでの代替背景色 */
+    }
+    /* 操作ボタンの配置 */
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: repeat(3, 50px);
+      grid-template-rows: repeat(3, 50px);
+      gap: 10px;
+    }
+    /* ボタンの基本スタイル */
+    #controls button {
+      width: 50px;
+      height: 50px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    /* 十字キーのレイアウト用に、不要な位置は非表示に */
+    #controls button.invisible {
+      visibility: hidden;
+    }
+  </style>
+</head>
+<body>
+  <!-- ゲーム描画用のキャンバス -->
+  <canvas id="gameCanvas" width="640" height="480"></canvas>
+  <!-- 操作ボタン（十字キー） -->
+  <div id="controls">
+    <button id="up">↑</button>
+    <button class="invisible"></button>
+    <button id="right">→</button>
+    <button id="left">←</button>
+    <button class="invisible"></button>
+    <button id="down">↓</button>
+    <button class="invisible"></button>
+    <button class="invisible"></button>
+    <button class="invisible"></button>
+  </div>
+  
+  <script>
+    // ずっきー、以下のコードでシンプルなJavaScriptゲームを実装するよ
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 画像の読み込み
+    const backgroundImg = new Image();
+    backgroundImg.src = 'images/background.png'; // 背景画像（適宜用意してね）
+
+    const characterImg = new Image();
+    // キャラクターは横に2コマ並んだスプライトシート（1コマあたり32x32、全体で64x32）
+    characterImg.src = 'images/character.png'; // キャラクター画像
+
+    // キャラクターの初期状態
+    const character = {
+      x: canvas.width / 2 - 16, // キャンバス中央に配置（キャラクターサイズ32x32）
+      y: canvas.height / 2 - 16,
+      speed: 4,              // 移動速度
+      frame: 0,              // 現在のアニメーションコマ（0または1）
+      width: 32,
+      height: 32
+    };
+
+    // 入力状態の管理
+    const input = {
+      up: false,
+      down: false,
+      left: false,
+      right: false
+    };
+
+    // 更新処理：入力に応じてキャラクターの位置を更新
+    function update() {
+      let moved = false;
+      if (input.up) {
+        character.y -= character.speed;
+        moved = true;
+      }
+      if (input.down) {
+        character.y += character.speed;
+        moved = true;
+      }
+      if (input.left) {
+        character.x -= character.speed;
+        moved = true;
+      }
+      if (input.right) {
+        character.x += character.speed;
+        moved = true;
+      }
+      // 移動があったらコマを切り替え、アニメーション風に見せる
+      if (moved) {
+        character.frame = (character.frame + 1) % 2;
+      }
+    }
+
+    // 描画処理：背景とキャラクターを描画
+    function draw() {
+      // 背景描画
+      if (backgroundImg.complete) {
+        ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+      } else {
+        // 画像が読み込まれる前は塗りつぶし
+        ctx.fillStyle = '#87ceeb';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      
+      // キャラクター描画
+      // スプライトシートの左側32pxがコマ0、右側32pxがコマ1
+      if (characterImg.complete) {
+        ctx.drawImage(
+          characterImg,
+          character.frame * character.width, 0,  // ソースのx位置
+          character.width, character.height,       // ソースサイズ
+          character.x, character.y,                // キャンバス上の描画位置
+          character.width, character.height        // 描画サイズ
+        );
+      } else {
+        // 画像が読み込まれる前は仮の赤い四角形
+        ctx.fillStyle = 'red';
+        ctx.fillRect(character.x, character.y, character.width, character.height);
+      }
+    }
+
+    // ゲームループ
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // 操作ボタン用のイベントリスナーを登録
+    function addControlEvents(buttonId, direction) {
+      const btn = document.getElementById(buttonId);
+      btn.addEventListener('mousedown', () => {
+        input[direction] = true;
+      });
+      btn.addEventListener('mouseup', () => {
+        input[direction] = false;
+      });
+      // タッチ操作にも対応
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        input[direction] = true;
+      });
+      btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        input[direction] = false;
+      });
+    }
+
+    addControlEvents('up', 'up');
+    addControlEvents('down', 'down');
+    addControlEvents('left', 'left');
+    addControlEvents('right', 'right');
+
+    // キーボードの矢印キーにも対応
+    window.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowUp':    input.up = true; break;
+        case 'ArrowDown':  input.down = true; break;
+        case 'ArrowLeft':  input.left = true; break;
+        case 'ArrowRight': input.right = true; break;
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      switch (e.key) {
+        case 'ArrowUp':    input.up = false; break;
+        case 'ArrowDown':  input.down = false; break;
+        case 'ArrowLeft':  input.left = false; break;
+        case 'ArrowRight': input.right = false; break;
+      }
+    });
+
+    // 画像が読み込まれているか確認してゲームを開始
+    backgroundImg.onload = () => {
+      characterImg.onload = () => {
+        gameLoop();
+      };
+    };
+    // 万が一、画像が読み込まれなかった場合でも1秒後に開始
+    setTimeout(() => {
+      if (!backgroundImg.complete || !characterImg.complete) {
+        gameLoop();
+      }
+    }, 1000);
+  </script>
+</body>
+</html>
